@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+        <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -16,61 +16,86 @@
         h1 { font-family: 'Cinzel'; font-size: 2rem; letter-spacing: 14px; color: var(--gold); text-shadow: 0 0 25px rgba(212, 175, 55, 0.4); }
         .glass { background: rgba(10, 10, 20, 0.85); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border-top: 1px solid rgba(212, 175, 55, 0.2); border-radius: 40px 40px 0 0; padding: 30px; }
         input, textarea { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(212, 175, 55, 0.1); border-radius: 12px; color: #fff; padding: 15px; margin-bottom: 12px; font-size: 1.1rem; outline: none; }
-        .btn { background: linear-gradient(135deg, #700, #d00); color: #fff; border: none; padding: 18px; border-radius: 15px; width: 100%; font-family: 'Cinzel'; font-weight: 900; letter-spacing: 3px; cursor: pointer; }
+        .btn { background: linear-gradient(135deg, #700, #d00); color: #fff; border: none; padding: 18px; border-radius: 15px; width: 100%; font-family: 'Cinzel'; font-weight: 900; letter-spacing: 3px; cursor: pointer; box-shadow: 0 5px 15px rgba(150,0,0,0.5); }
         .audio-btn { position: fixed; top: 20px; right: 20px; z-index: 100; border: 1px solid var(--gold); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); color: var(--gold); }
+        #log { margin-top: 15px; max-height: 80px; overflow-y: auto; font-size: 0.85rem; color: #aaa; font-style: italic; }
     </style>
 </head>
 <body>
 <div class="audio-btn" onclick="ctrl()" id="mB">🔇</div>
 <canvas id="c"></canvas>
-<audio id="m" loop><source src="musica.mp3" type="audio/mpeg"></audio>
+
+<audio id="m" loop preload="auto">
+    <source src="C418 - Mice on Venus (Doomer Version)(MP3_320K).mp3" type="audio/mpeg">
+</audio>
+
 <div class="ui">
     <header><h1>KROLKOA</h1></header>
     <div style="flex:1"></div>
     <div class="glass">
-        <input type="text" id="t" placeholder="Título da Lore...">
-        <textarea id="l" rows="3" placeholder="O Codex aguarda..."></textarea>
+        <input type="text" id="t" placeholder="Título da Lore..." onfocus="ctx.resume()">
+        <textarea id="l" rows="3" placeholder="O Codex aguarda o seu relato..."></textarea>
         <button class="btn" onclick="f()">FORJAR NO CODEX</button>
-        <div id="log" style="margin-top:15px; max-height:100px; overflow-y:auto; font-size:0.8rem; color:var(--gold)"></div>
+        <div id="log"></div>
     </div>
 </div>
 <script>
-    const cvs = document.getElementById('c'), ctx = cvs.getContext('2d'), aud = document.getElementById('m');
-    let w, h, t = 0, p = 0;
+    const cvs = document.getElementById('c'), ctx = cvs.getContext('2d'), aud = document.getElementById('m'), mB = document.getElementById('mB');
+    let w, h, time = 0, p = 0;
     function rs() { w = cvs.width = window.innerWidth; h = cvs.height = window.innerHeight; }
     window.onresize = rs; rs();
-    function ctrl() { if(aud.paused){aud.play(); mB.innerText='🔊'}else{aud.pause(); mB.innerText='🔇'} }
+    
+    function ctrl() { 
+        if(aud.paused){
+            aud.play().catch(e => console.log("Erro ao tocar")); 
+            mB.innerText='🔊';
+        } else {
+            aud.pause(); 
+            mB.innerText='🔇';
+        } 
+    }
+
     function drw() {
-        ctx.fillStyle = '#030305'; ctx.fillRect(0,0,w,h); t += 0.005; p *= 0.94;
-        const x = w/2, y = h*0.35, r = 80 + p;
-        // Nebulosa
-        const b = ctx.createRadialGradient(x,y,0,x,y,w);
-        b.addColorStop(0,'rgba(20,30,60,0.2)'); b.addColorStop(1,'transparent');
-        ctx.fillStyle = b; ctx.fillRect(0,0,w,h);
+        ctx.fillStyle = '#030305'; ctx.fillRect(0,0,w,h); time += 0.005; p *= 0.94;
+        const x = w/2, y = h*0.35, r = 85 + p;
+
         // Estrelas
-        ctx.fillStyle="#fff"; for(let i=0;i<50;i++) ctx.fillRect((i*193)%w, (i*721+t*15)%h, 1, 1);
-        // Atmosfera
-        const g = ctx.createRadialGradient(x,y,r,x,y,r+50);
-        g.addColorStop(0,'rgba(100,150,255,0.4)'); g.addColorStop(1,'transparent');
-        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r+50,0,7); ctx.fill();
-        // Planeta
+        ctx.fillStyle="#fff"; for(let i=0;i<40;i++) ctx.fillRect((i*193)%w, (i*721+time*10)%h, 1, 1);
+        
+        // Brilho Atmosférico Profundo
+        const g = ctx.createRadialGradient(x,y,r,x,y,r+60);
+        g.addColorStop(0,'rgba(60,100,220,0.3)'); g.addColorStop(1,'transparent');
+        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r+60,0,7); ctx.fill();
+
+        // O Planeta Krolkoa
         ctx.save(); ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.clip();
-        ctx.fillStyle='#0a1530'; ctx.fill();
-        ctx.fillStyle='#1a301a'; for(let i=0;i<5;i++){
-            ctx.beginPath(); ctx.arc(x+Math.sin(t+i)*40+(i*20-40), y+Math.cos(i)*20, r*0.4, 0, 7); ctx.fill();
+        ctx.fillStyle='#0a1530'; ctx.fill(); // Oceano
+        ctx.fillStyle='#1e3d1e'; // Continentes
+        for(let i=0;i<5;i++){
+            ctx.beginPath(); ctx.arc(x+Math.sin(time+i)*45+(i*25-50), y+Math.cos(i)*25, r*0.45, 0, 7); ctx.fill();
         }
-        const sh = ctx.createRadialGradient(x-r*0.4, y-r*0.4, r*0.2, x, y, r);
-        sh.addColorStop(0,'transparent'); sh.addColorStop(1,'rgba(0,0,0,0.8)');
+        // Sombra Realista
+        const sh = ctx.createRadialGradient(x-r*0.5, y-r*0.5, r*0.1, x, y, r);
+        sh.addColorStop(0,'transparent'); sh.addColorStop(1,'rgba(0,0,0,0.85)');
         ctx.fillStyle=sh; ctx.fillRect(x-r,y-r,r*2,r*2);
         ctx.restore();
+
+        // Luas Gêmeas com brilho
+        for(let i=0; i<2; i++) {
+            let s = time * (i==0?1:-0.6);
+            let lx = x + Math.cos(s)*(r+50+i*25), ly = y + Math.sin(s)*20;
+            ctx.fillStyle = i==0?'#fff':'#666'; ctx.beginPath(); ctx.arc(lx,ly,i==0?5:3,0,7); ctx.fill();
+        }
         requestAnimationFrame(drw);
     }
     drw();
+
     function f() {
-        const title = t.value, lore = l.value; if(!title || !lore) return;
-        p = 40; const el = document.createElement('div');
-        el.innerHTML = `> ${title} registrado.`; log.prepend(el);
-        const blob = new Blob([`KROLKOA\n\n${title}\n${lore}`], {type:'text/plain'});
+        const title = document.getElementById('t').value, lore = document.getElementById('l').value;
+        if(!title || !lore) return;
+        p = 45; 
+        document.getElementById('log').innerHTML = `> Forjando: ${title}...<br>` + document.getElementById('log').innerHTML;
+        const blob = new Blob([`KROLKOA - ${title}\n\n${lore}`], {type:'text/plain'});
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
         a.download = `${title}.txt`; a.click();
     }
