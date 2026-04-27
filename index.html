@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KROLKOA | DIVINE CODEX</title>
+    
+    <!-- Meta tags para App Mobile (PWA) -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#020205">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&display=swap');
+
+        :root {
+            --gold: #e5c07b;
+            --deep: #020205;
+            --glass: rgba(10, 10, 20, 0.95);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            background: var(--deep); 
+            color: #f8fafc; 
+            font-family: 'Cormorant Garamond', serif;
+            overflow: hidden;
+            height: 100vh; width: 100vw;
+            position: fixed;
+        }
+
+        canvas { position: absolute; top: 0; left: 0; }
+        #nebula-canvas { z-index: 0; filter: blur(1px); }
+        #celestial-viewport { z-index: 5; }
+
+        .app-container {
+            position: relative;
+            z-index: 10;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            pointer-events: none;
+        }
+
+        header { text-align: center; padding: 50px 20px 10px; }
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 2.2rem; letter-spacing: 12px;
+            background: linear-gradient(to bottom, #fff, var(--gold));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px rgba(229, 192, 123, 0.4));
+        }
+
+        .main-ui {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            pointer-events: auto;
+        }
+
+        .glass-panel {
+            background: var(--glass);
+            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid var(--gold);
+            border-radius: 35px 35px 0 0;
+            padding: 30px;
+            max-height: 75vh;
+            overflow-y: auto;
+            box-shadow: 0 -15px 60px rgba(0,0,0,1);
+        }
+
+        input, textarea {
+            width: 100%; background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px; color: #fff; padding: 18px;
+            margin-bottom: 15px; font-family: 'Cormorant Garamond';
+            font-size: 1.2rem; outline: none; transition: 0.3s;
+        }
+
+        input:focus, textarea:focus { border-color: var(--gold); background: rgba(255,255,255,0.08); }
+
+        .btn-forge {
+            background: linear-gradient(135deg, #8b0000 0%, #ff4d4d 100%);
+            color: white; border: none; padding: 20px;
+            border-radius: 18px; width: 100%;
+            font-family: 'Cinzel'; font-weight: 900; letter-spacing: 4px;
+            cursor: pointer; box-shadow: 0 10px 30px rgba(139, 0, 0, 0.6);
+            transition: 0.2s;
+        }
+
+        .btn-forge:active { transform: scale(0.95); }
+
+        .entries { margin-top: 30px; }
+        .card {
+            background: rgba(255,255,255,0.02);
+            border-left: 3px solid var(--gold);
+            padding: 20px; border-radius: 12px; margin-bottom: 15px;
+            animation: appear 0.5s ease-out;
+        }
+
+        @keyframes appear { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .card h3 { font-family: 'Cinzel'; color: var(--gold); font-size: 1.1rem; margin-bottom: 5px; }
+        .card p { font-size: 1.1rem; opacity: 0.85; line-height: 1.5; }
+
+        .audio-btn {
+            position: fixed; top: 25px; right: 25px; z-index: 100;
+            background: rgba(0,0,0,0.5); border: 1px solid var(--gold);
+            width: 50px; height: 50px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 1.4rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="audio-btn" id="audioToggle" onclick="toggleAudio()">🔇</div>
+<canvas id="nebula-canvas"></canvas>
+<canvas id="celestial-viewport"></canvas>
+
+<div class="app-container">
+    <header><h1>KROLKOA</h1></header>
+    <div class="main-ui">
+        <div class="glass-panel">
+            <input type="text" id="title" placeholder="Título da Lore..." oninput="sfx.type()">
+            <textarea id="content" rows="3" placeholder="O Codex aguarda o seu relato..." oninput="sfx.type()"></textarea>
+            <button class="btn-forge" onclick="forge()">FORJAR NO CODEX</button>
+            <div id="entries" class="entries"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- MOTOR DE ÁUDIO SINTETIZADO ---
+    const sfx = {
+        ctx: null, active: false,
+        init() { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); this.active = true; },
+        type() {
+            if(!this.active) return;
+            const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
+            o.type='sine'; o.frequency.setValueAtTime(120 + Math.random()*80, this.ctx.currentTime);
+            g.gain.setValueAtTime(0.04, this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime+0.05);
+            o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.05);
+        },
+        impact() {
+            if(!this.active) return;
+            const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
+            o.type='triangle'; o.frequency.setValueAtTime(200, this.ctx.currentTime); o.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime+0.4);
+            g.gain.setValueAtTime(0.2, this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime+0.4);
+            o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.4);
+        },
+        bgm() {
+            const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
+            o.type='sine'; o.frequency.setValueAtTime(55, this.ctx.currentTime);
+            g.gain.setValueAtTime(0.03, this.ctx.currentTime); o.connect(g); g.connect(this.ctx.destination); o.start();
+        }
+    };
+
+    function toggleAudio() {
+        if(!sfx.active) { sfx.init(); sfx.bgm(); document.getElementById('audioToggle').innerText='🔊'; }
+        else { sfx.ctx.close(); sfx.active=false; document.getElementById('audioToggle').innerText='🔇'; }
+    }
+
+    // --- GRÁFICOS PULSANTES ---
+    const nav = document.getElementById('nebula-canvas'); const main = document.getElementById('celestial-viewport');
+    const nCtx = nav.getContext('2d'); const mCtx = main.getContext('2d');
+    let W, H, time=0, boost=0;
+    function res() { W=nav.width=main.width=window.innerWidth; H=nav.height=main.height=window.innerHeight; }
+    window.onresize=res; res();
+
+    function render() {
+        nCtx.clearRect(0,0,W,H); mCtx.clearRect(0,0,W,H); time++; if(boost>0) boost*=0.94;
+        
+        // Estrelas
+        nCtx.fillStyle="#fff"; for(let i=0; i<60; i++) { nCtx.globalAlpha=Math.abs(Math.sin(time*0.015+i)); nCtx.fillRect((i*137)%W, (i*253)%H, 1, 1); }
+        
+        const cx=W/2, cy=H*0.28, r=85+boost;
+        
+        // Atmosfera
+        const g = mCtx.createRadialGradient(cx, cy, r, cx, cy, r+40+boost);
+        g.addColorStop(0, boost>5?'rgba(229,192,123,0.4)':'rgba(100,150,255,0.15)'); g.addColorStop(1,'transparent');
+        mCtx.fillStyle=g; mCtx.beginPath(); mCtx.arc(cx,cy,r+50,0,Math.PI*2); mCtx.fill();
+        
+        // Planeta Krolkoa
+        const b = mCtx.createRadialGradient(cx-r*0.3, cy-r*0.3, r*0.1, cx, cy, r);
+        b.addColorStop(0,'#1d4ed8'); b.addColorStop(1,'#020617');
+        mCtx.fillStyle=b; mCtx.beginPath(); mCtx.arc(cx,cy,r,0,Math.PI*2); mCtx.fill();
+        
+        requestAnimationFrame(render);
+    }
+    render();
+
+    // --- LÓGICA DO APP ---
+    let db = JSON.parse(localStorage.getItem('krolkoa_final')) || [];
+    function forge() {
+        const t = document.getElementById('title').value, c = document.getElementById('content').value;
+        if(!t || !c) return;
+        boost=50; sfx.impact();
+        const entry = {t, c, d: new Date().toLocaleString()};
+        db.unshift(entry); localStorage.setItem('krolkoa_final', JSON.stringify(db));
+        
+        // Salva arquivo físico
+        const text = `KROLKOA - REGISTRO DO CODEX\n\nREGISTRO: ${t}\nDATA: ${entry.d}\n\nCONTEÚDO:\n${c}`;
+        const blob = new Blob([text], {type:'text/plain'});
+        const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`krolkoa_${t.replace(/\s+/g,'_')}.txt`; a.click();
+        
+        updateUI();
+        document.getElementById('title').value=''; document.getElementById('content').value='';
+    }
+    function updateUI() {
+        document.getElementById('entries').innerHTML = db.map(i => `<div class="card"><h3>${i.t}</h3><p>${i.c}</p></div>`).join('');
+    }
+    updateUI();
+</script>
+</body>
+</html>
